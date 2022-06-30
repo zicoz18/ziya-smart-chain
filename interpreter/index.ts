@@ -9,6 +9,8 @@ const GT = "GT";
 const EQ = "EQ";
 const AND = "AND";
 const OR = "OR";
+const JUMP = "JUMP";
+const JUMPI = "JUMPI";
 
 type Code = string | number;
 
@@ -27,6 +29,12 @@ class Interpreter {
 			stack: [],
 			code: [],
 		};
+	}
+
+	jump() {
+		const destination = this.state.stack.pop();
+		this.state.programCounter = destination as number;
+		this.state.programCounter--;
 	}
 
 	runCode(code: Code[]) {
@@ -69,6 +77,15 @@ class Interpreter {
 						if (opCode === OR) result = a || b;
 
 						this.state.stack.push(result as number);
+						break;
+					case JUMP:
+						this.jump();
+						break;
+					case JUMPI:
+						const condition = this.state.stack.pop();
+						if (condition) {
+							this.jump();
+						}
 						break;
 					default:
 						break;
@@ -120,3 +137,11 @@ console.log("Result of 0 AND 1 => ", result);
 code = [PUSH, 1, PUSH, 0, OR, STOP];
 result = new Interpreter().runCode(code);
 console.log("Result of 0 OR 1 => ", result);
+
+code = [PUSH, 6, JUMP, PUSH, 0, JUMP, PUSH, "jump successful", STOP];
+result = new Interpreter().runCode(code);
+console.log("Result of JUMP => ", result);
+
+code = [PUSH, 8, PUSH, 1, JUMPI, PUSH, 0, JUMP, PUSH, "jump successful", STOP];
+result = new Interpreter().runCode(code);
+console.log("Result of JUMPI => ", result);

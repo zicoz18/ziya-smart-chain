@@ -1,26 +1,27 @@
 {
-  "name": "ziya-chain-v2",
-  "version": "1.0.0",
-  "description": "Ethereum like PoW based blockchain",
-  "main": "index.js",
-  "scripts": {
-    "start": "ts-node index.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/zicoz18/ziya-chain-v2.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/zicoz18/ziya-chain-v2/issues"
-  },
-  "homepage": "https://github.com/zicoz18/ziya-chain-v2#readme",
-  "devDependencies": {
-    "nodemon": "^2.0.18",
-    "ts-node": "^10.8.1",
-    "typescript": "^4.7.4"
-  }
+	"name": "ziya-chain-v2",
+	"version": "1.0.0",
+	"description": "Ethereum like PoW based blockchain",
+	"main": "index.js",
+	"scripts": {
+		"start": "ts-node index.ts",
+		"interpreter": "ts-node ./interpreter/index.ts",
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/zicoz18/ziya-chain-v2.git"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"bugs": {
+		"url": "https://github.com/zicoz18/ziya-chain-v2/issues"
+	},
+	"homepage": "https://github.com/zicoz18/ziya-chain-v2#readme",
+	"devDependencies": {
+		"nodemon": "^2.0.18",
+		"ts-node": "^10.8.1",
+		"typescript": "^4.7.4"
+	}
 }

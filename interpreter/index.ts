@@ -1,5 +1,8 @@
 const STOP = "STOP";
 const ADD = "ADD";
+const SUB = "SUB";
+const MUL = "MUL";
+const DIV = "DIV";
 const PUSH = "PUSH";
 
 type Code = string | number;
@@ -37,9 +40,20 @@ class Interpreter {
 						this.state.stack.push(value);
 						break;
 					case ADD:
+					case SUB:
+					case MUL:
+					case DIV:
 						const a = this.state.stack.pop() as number; // Wrong, fix this. Should check if stack is empty
 						const b = this.state.stack.pop() as number;
-						this.state.stack.push(a + b);
+
+						let result;
+
+						if (opCode === ADD) result = a + b;
+						if (opCode === SUB) result = a - b;
+						if (opCode === MUL) result = a * b;
+						if (opCode === DIV) result = a / b;
+
+						this.state.stack.push(result as number);
 						break;
 					default:
 						break;
@@ -53,8 +67,21 @@ class Interpreter {
 	}
 }
 
-const code = [PUSH, 2, PUSH, 3, ADD, STOP];
+let code;
+let result;
 
-const interpreter = new Interpreter();
-const val = interpreter.runCode(code);
-console.log("val => ", val);
+code = [PUSH, 2, PUSH, 3, ADD, STOP];
+result = new Interpreter().runCode(code);
+console.log("Result of 3 ADD 2 => ", result);
+
+code = [PUSH, 2, PUSH, 3, SUB, STOP];
+result = new Interpreter().runCode(code);
+console.log("Result of 3 SUB 2 => ", result);
+
+code = [PUSH, 2, PUSH, 3, MUL, STOP];
+result = new Interpreter().runCode(code);
+console.log("Result of 3 MUL 2 => ", result);
+
+code = [PUSH, 2, PUSH, 3, DIV, STOP];
+result = new Interpreter().runCode(code);
+console.log("Result of 3 DIV 2 => ", result);

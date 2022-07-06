@@ -2,7 +2,7 @@ import Block from "../../blockchain/block";
 import { keccakHash } from "../../util";
 
 describe("Block", () => {
-	describe("calculateBlockTargetHash", () => {
+	describe("calculateBlockTargetHash()", () => {
 		it("calculates the maximum hash when the last block's difficulty is 1", () => {
 			expect(
 				Block.calculateBlockTargetHash({
@@ -11,7 +11,7 @@ describe("Block", () => {
 			).toEqual("f".repeat(64));
 		});
 
-		it("calculates a low hash value when the last block difficult is high", () => {
+		it("calculates a low hash value when the last block difficulty is high", () => {
 			expect(
 				Block.calculateBlockTargetHash({
 					lastBlock: { blockHeaders: { difficulty: 500 } },
@@ -20,7 +20,7 @@ describe("Block", () => {
 		});
 	});
 
-	describe("mineBlock", () => {
+	describe("mineBlock()", () => {
 		let lastBlock: Block, minedBlock: Block;
 
 		beforeEach(() => {
@@ -45,7 +45,7 @@ describe("Block", () => {
 		});
 	});
 
-	describe("adjustDifficulty", () => {
+	describe("adjustDifficulty()", () => {
 		it("keeps the difficulty above 0", () => {
 			expect(
 				Block.adjustDifficulty({
@@ -71,6 +71,56 @@ describe("Block", () => {
 					timestamp: 20000,
 				})
 			).toEqual(4);
+		});
+	});
+
+	describe("validateBlock()", () => {
+		let block: any, lastBlock: any;
+
+		beforeEach(() => {
+			lastBlock = Block.genesis();
+			block = Block.mineBlock({ lastBlock, beneficiary: "beneficiary" });
+		});
+
+		it("resolves when the block is the genesis block", () => {
+			expect(Block.validateBlock({ block: Block.genesis() })).resolves;
+		});
+
+		it("resolves if the block is valid", () => {
+			expect(Block.validateBlock({ block: Block.genesis(), lastBlock }))
+				.resolves;
+		});
+
+		it("rejects when the parentHash is invalid", () => {
+			block.blockHeaders.parentHash = "foo";
+			expect(Block.validateBlock({ block, lastBlock })).rejects.toMatchObject({
+				message: "The parent has must be a hash of the last block's headers",
+			});
+		});
+
+		it("rejects when the number is not increased by one", () => {
+			block.blockHeaders.number = 500;
+			expect(Block.validateBlock({ block, lastBlock })).rejects.toMatchObject({
+				message: "The block must increment the number by 1",
+			});
+		});
+
+		it("rejects when the difficulty adjusts by more than 1", () => {
+			block.blockHeaders.difficulty = 999;
+			expect(Block.validateBlock({ block, lastBlock })).rejects.toMatchObject({
+				message: "The difficulty must only adjust by 1",
+			});
+		});
+
+		it("rejects when the proof of work requirement is not met", () => {
+			const originalCalculateBlockTargetHash = Block.calculateBlockTargetHash;
+			Block.calculateBlockTargetHash = () => {
+				return "0f".repeat(64);
+			};
+			expect(Block.validateBlock({ block, lastBlock })).rejects.toMatchObject({
+				message: "The block does not meet the proof of work requirement",
+			});
+			Block.calculateBlockTargetHash = originalCalculateBlockTargetHash;
 		});
 	});
 });

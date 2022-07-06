@@ -9,4 +9,8 @@ const GENESIS_DATA = {
 	},
 };
 
-export { GENESIS_DATA };
+const MILLISECONDS = 1;
+const SECONDS = 1000 * MILLISECONDS;
+const MINE_RATE = 13 * SECONDS;
+
+export { GENESIS_DATA, MINE_RATE };

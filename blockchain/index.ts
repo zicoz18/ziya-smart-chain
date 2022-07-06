@@ -6,6 +6,10 @@ class Blockchain {
 	constructor() {
 		this.chain = [Block.genesis()];
 	}
+
+	addBlock({ block }: any) {
+		this.chain.push(block);
+	}
 }
 
 export default Blockchain;

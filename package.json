@@ -6,6 +6,8 @@
 	"scripts": {
 		"start": "ts-node ./api/index.ts",
 		"dev": "nodemon ./api/index.ts",
+		"dev-peer": "nodemon ./api/index.ts --peer",
+		"deneme": "ts-node ./api/pubsub.ts",
 		"interpreter": "ts-node ./interpreter/index.ts",
 		"test": "jest --watchAll"
 	},
@@ -23,14 +25,21 @@
 	"devDependencies": {
 		"@types/express": "^4.17.13",
 		"@types/jest": "^28.1.4",
+		"@types/pubnub": "^7.0.0",
 		"nodemon": "^2.0.19",
 		"ts-node": "^10.8.1",
 		"typescript": "^4.7.4"
 	},
 	"dependencies": {
+		"@types/axios": "^0.14.0",
+		"@types/uuid": "^8.3.4",
+		"axios": "^0.27.2",
+		"dotenv": "^16.0.1",
 		"express": "^4.18.1",
 		"jest": "^28.1.2",
 		"js-sha3": "^0.8.0",
-		"ts-jest": "^28.0.5"
+		"pubnub": "^7.2.0",
+		"ts-jest": "^28.0.5",
+		"uuid": "^8.3.2"
 	}
 }

@@ -7,9 +7,11 @@ const MAX_NONCE_VALUE = 2 ** 64;
 
 class Block {
 	public blockHeaders: any;
+	public transactionSeries: any;
 
-	constructor({ blockHeaders }: any) {
+	constructor({ blockHeaders, transactionSeries }: any) {
 		this.blockHeaders = blockHeaders;
+		this.transactionSeries = transactionSeries;
 	}
 
 	static calculateBlockTargetHash({ lastBlock }: any) {
@@ -37,7 +39,7 @@ class Block {
 		return difficulty + 1;
 	}
 
-	static mineBlock({ lastBlock, beneficiary }: any) {
+	static mineBlock({ lastBlock, beneficiary, transactionSeries }: any) {
 		const target = this.calculateBlockTargetHash({ lastBlock });
 		let timestamp, truncatedBlockHeaders, header, nonce, underTargetHash;
 
@@ -49,6 +51,8 @@ class Block {
 				difficulty: Block.adjustDifficulty({ lastBlock, timestamp }),
 				number: lastBlock.blockHeaders.number + 1,
 				timestamp,
+				// TODO: the transactionsRoot will be refactored after Tries are implemented
+				transactionsRoot: keccakHash(transactionSeries),
 			};
 			header = keccakHash(truncatedBlockHeaders);
 			nonce = Math.floor(Math.random() * MAX_NONCE_VALUE);
@@ -61,6 +65,7 @@ class Block {
 				...truncatedBlockHeaders,
 				nonce,
 			},
+			transactionSeries,
 		});
 	}
 

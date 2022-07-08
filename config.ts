@@ -6,11 +6,15 @@ const GENESIS_DATA = {
 		number: 0,
 		timestamp: "--genesis-timestamp--",
 		nonce: 0,
+		transactionsRoot: "--genesis-transactions-root--",
 	},
+	transactionSeries: [],
 };
 
 const MILLISECONDS = 1;
 const SECONDS = 1000 * MILLISECONDS;
 const MINE_RATE = 13 * SECONDS;
 
-export { GENESIS_DATA, MINE_RATE };
+const STARTING_BALANCE = 1000;
+
+export { GENESIS_DATA, MINE_RATE, STARTING_BALANCE };

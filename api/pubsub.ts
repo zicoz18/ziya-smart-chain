@@ -1,5 +1,6 @@
 import PubNub from "pubnub";
 import dotenv from "dotenv";
+import Transaction from "../transaction";
 
 dotenv.config();
 
@@ -13,15 +14,18 @@ const credentials = {
 const CHANNELS_MAP = {
 	TEST: "TEST",
 	BLOCK: "BLOCK",
+	TRANSACTION: "TRANSACTION",
 };
 
 class PubSub {
 	public pubnub: PubNub;
 	public blockchain: any;
+	public transactionQueue: any;
 
-	constructor({ blockchain }: any) {
+	constructor({ blockchain, transactionQueue }: any) {
 		this.pubnub = new PubNub(credentials as any);
 		this.blockchain = blockchain;
+		this.transactionQueue = transactionQueue;
 		this.subscribeToChannels();
 		this.listen();
 	}
@@ -46,11 +50,18 @@ class PubSub {
 					case CHANNELS_MAP.BLOCK:
 						console.log("block message: ", message);
 						this.blockchain
-							.addBlock({ block: parsedMessage })
-							.then(() => console.log("New block accepted"))
+							.addBlock({
+								block: parsedMessage,
+								transactionQueue: this.transactionQueue,
+							})
+							.then(() => console.log("New block accepted", parsedMessage))
 							.catch((error: any) =>
 								console.error("New block rejected: ", error.message)
 							);
+						break;
+					case CHANNELS_MAP.TRANSACTION:
+						console.log(`Recieved transaction: ${parsedMessage.id}`);
+						this.transactionQueue.add(new Transaction(parsedMessage));
 						break;
 					default:
 						return;
@@ -63,6 +74,13 @@ class PubSub {
 		this.publish({
 			channel: CHANNELS_MAP.BLOCK,
 			message: JSON.stringify(block),
+		});
+	}
+
+	broadcastTransaction(transaction: any) {
+		this.publish({
+			channel: CHANNELS_MAP.TRANSACTION,
+			message: JSON.stringify(transaction),
 		});
 	}
 }

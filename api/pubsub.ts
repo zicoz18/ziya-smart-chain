@@ -1,7 +1,5 @@
 import PubNub from "pubnub";
 import dotenv from "dotenv";
-import { v4 as uuidv4, v4 } from "uuid";
-import Blockchain from "../blockchain";
 
 dotenv.config();
 

@@ -1,4 +1,5 @@
 import Block from "../../blockchain/block";
+import State from "../../store/state";
 import { keccakHash } from "../../util";
 
 describe("Block", () => {
@@ -25,7 +26,11 @@ describe("Block", () => {
 
 		beforeEach(() => {
 			lastBlock = Block.genesis();
-			minedBlock = Block.mineBlock({ lastBlock, beneficiary: "beneficiary" });
+			minedBlock = Block.mineBlock({
+				lastBlock,
+				beneficiary: "beneficiary",
+				transactionSeries: [],
+			});
 		});
 
 		it("mines a block", () => {
@@ -75,39 +80,50 @@ describe("Block", () => {
 	});
 
 	describe("validateBlock()", () => {
-		let block: any, lastBlock: any;
+		let block: any, lastBlock: any, state: any;
 
 		beforeEach(() => {
 			lastBlock = Block.genesis();
-			block = Block.mineBlock({ lastBlock, beneficiary: "beneficiary" });
+			block = Block.mineBlock({
+				lastBlock,
+				beneficiary: "beneficiary",
+				transactionSeries: [],
+			});
+			state = new State();
 		});
 
 		it("resolves when the block is the genesis block", () => {
-			expect(Block.validateBlock({ block: Block.genesis() })).resolves;
+			expect(Block.validateBlock({ block: Block.genesis(), state })).resolves;
 		});
 
 		it("resolves if the block is valid", () => {
-			expect(Block.validateBlock({ block: Block.genesis(), lastBlock }))
+			expect(Block.validateBlock({ block: Block.genesis(), lastBlock, state }))
 				.resolves;
 		});
 
 		it("rejects when the parentHash is invalid", () => {
 			block.blockHeaders.parentHash = "foo";
-			expect(Block.validateBlock({ block, lastBlock })).rejects.toMatchObject({
+			expect(
+				Block.validateBlock({ block, lastBlock, state })
+			).rejects.toMatchObject({
 				message: "The parent has must be a hash of the last block's headers",
 			});
 		});
 
 		it("rejects when the number is not increased by one", () => {
 			block.blockHeaders.number = 500;
-			expect(Block.validateBlock({ block, lastBlock })).rejects.toMatchObject({
+			expect(
+				Block.validateBlock({ block, lastBlock, state })
+			).rejects.toMatchObject({
 				message: "The block must increment the number by 1",
 			});
 		});
 
 		it("rejects when the difficulty adjusts by more than 1", () => {
 			block.blockHeaders.difficulty = 999;
-			expect(Block.validateBlock({ block, lastBlock })).rejects.toMatchObject({
+			expect(
+				Block.validateBlock({ block, lastBlock, state })
+			).rejects.toMatchObject({
 				message: "The difficulty must only adjust by 1",
 			});
 		});
@@ -117,10 +133,21 @@ describe("Block", () => {
 			Block.calculateBlockTargetHash = () => {
 				return "0f".repeat(64);
 			};
-			expect(Block.validateBlock({ block, lastBlock })).rejects.toMatchObject({
+			expect(
+				Block.validateBlock({ block, lastBlock, state })
+			).rejects.toMatchObject({
 				message: "The block does not meet the proof of work requirement",
 			});
 			Block.calculateBlockTargetHash = originalCalculateBlockTargetHash;
+		});
+
+		it("rejects when the transactionSeries is not valid", () => {
+			block.transactionSeries = ["foo"];
+			expect(
+				Block.validateBlock({ block, lastBlock, state })
+			).rejects.toMatchObject({
+				message: /rebuilt transactions root does not match/,
+			});
 		});
 	});
 });

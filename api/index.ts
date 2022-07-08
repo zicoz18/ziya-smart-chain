@@ -6,11 +6,15 @@ import Account from "../account";
 import Blockchain from "../blockchain";
 import Block from "../blockchain/block";
 import PubSub from "./pubsub";
+import State from "../store/state";
 import Transaction from "../transaction";
 import TransactionQueue from "../transaction/transaction-queue";
 
 const app = express();
-const blockchain = new Blockchain();
+app.use(bodyParser.json());
+
+const state = new State();
+const blockchain = new Blockchain({ state });
 const transactionQueue = new TransactionQueue();
 const pubsub = new PubSub({ blockchain, transactionQueue });
 const account = new Account();
@@ -19,8 +23,6 @@ const transaction = Transaction.createTransaction({ account });
 setTimeout(() => {
 	pubsub.broadcastTransaction(transaction);
 }, 500);
-
-app.use(bodyParser.json());
 
 app.get("/blockchain", (req, res, next) => {
 	const { chain } = blockchain;
@@ -33,6 +35,7 @@ app.get("/blockchain/mine", (req, res, next) => {
 		lastBlock,
 		beneficiary: account.address,
 		transactionSeries: transactionQueue.getTransactionSeries(),
+		stateRoot: state.getStateRoot(),
 	});
 
 	blockchain
@@ -54,6 +57,16 @@ app.post("/account/transact", (req, res, next) => {
 	pubsub.broadcastTransaction(transaction);
 
 	res.json({ transaction });
+});
+
+app.get("/account/balance", (req, res, next) => {
+	const { address } = req.query;
+
+	const balance = Account.calculateBalance({
+		address: address || account.address,
+		state,
+	});
+	res.json({ balance });
 });
 
 app.use((err: any, req: any, res: any, next: any) => {

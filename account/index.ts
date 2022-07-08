@@ -28,6 +28,10 @@ class Account {
 			balance: this.balance,
 		};
 	}
+
+	static calculateBalance({ address, state }: any) {
+		return state.getAccount({ address }).balance;
+	}
 }
 
 export default Account;

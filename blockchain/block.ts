@@ -1,5 +1,7 @@
 import { GENESIS_DATA, MINE_RATE } from "../config";
 import { keccakHash } from "../util";
+import Transaction from "../transaction";
+import Trie from "../store/trie";
 
 const HASH_LENGTH = 64;
 const MAX_HASH_VALUE = parseInt("f".repeat(HASH_LENGTH), 16);
@@ -39,8 +41,18 @@ class Block {
 		return difficulty + 1;
 	}
 
-	static mineBlock({ lastBlock, beneficiary, transactionSeries }: any) {
+	static mineBlock({
+		lastBlock,
+		beneficiary,
+		transactionSeries,
+		stateRoot,
+	}: any) {
 		const target = this.calculateBlockTargetHash({ lastBlock });
+		const miningRewardTransaction = Transaction.createTransaction({
+			beneficiary,
+		});
+		transactionSeries.push(miningRewardTransaction);
+		const transactionsTrie = Trie.buildTrie({ items: transactionSeries });
 		let timestamp, truncatedBlockHeaders, header, nonce, underTargetHash;
 
 		do {
@@ -51,8 +63,8 @@ class Block {
 				difficulty: Block.adjustDifficulty({ lastBlock, timestamp }),
 				number: lastBlock.blockHeaders.number + 1,
 				timestamp,
-				// TODO: the transactionsRoot will be refactored after Tries are implemented
-				transactionsRoot: keccakHash(transactionSeries),
+				transactionsRoot: transactionsTrie.rootHash,
+				stateRoot,
 			};
 			header = keccakHash(truncatedBlockHeaders);
 			nonce = Math.floor(Math.random() * MAX_NONCE_VALUE);
@@ -73,7 +85,7 @@ class Block {
 		return new this(GENESIS_DATA);
 	}
 
-	static validateBlock({ lastBlock, block }: any) {
+	static validateBlock({ lastBlock, block, state }: any) {
 		return new Promise<void>((resolve, reject) => {
 			if (keccakHash(block) === keccakHash(Block.genesis())) {
 				return resolve();
@@ -113,8 +125,33 @@ class Block {
 				);
 			}
 
-			return resolve();
+			const rebuiltTransactionsTrie = Trie.buildTrie({
+				items: block.transactionSeries,
+			});
+			console.log("block.blockHeader: ", block.blockHeaders);
+			if (
+				rebuiltTransactionsTrie.rootHash !== block.blockHeaders.transactionsRoot
+			) {
+				return reject(
+					new Error(
+						`The rebuild transactions root does not match the block's transactions root: ${block.blockHeaders.transactionRoot}`
+					)
+				);
+			}
+
+			Transaction.validateTransactionSeries({
+				state,
+				transactionSeries: block.transactionSeries,
+			})
+				.then(resolve)
+				.catch(reject);
 		});
+	}
+
+	static runBlock({ block, state }: any) {
+		for (let transaction of block.transactionSeries) {
+			Transaction.runTransaction({ transaction, state });
+		}
 	}
 }
 

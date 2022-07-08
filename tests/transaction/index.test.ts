@@ -1,18 +1,35 @@
 import Transaction from "../../transaction";
 import Account from "../../account";
+import State from "../../store/state";
 
 describe("Transaction", () => {
-	let account: any, standardTransaction: any, createAccountTransaction: any;
+	let account: any,
+		standardTransaction: any,
+		createAccountTransaction: any,
+		state: any,
+		toAccount: any,
+		miningRewardTransaction: any;
 
 	beforeEach(() => {
 		account = new Account();
+		toAccount = new Account();
+		state = new State();
+
+		state.putAccount({ address: account.address, accountData: account });
+		state.putAccount({ address: toAccount.address, accountData: toAccount });
+
 		standardTransaction = Transaction.createTransaction({
 			account,
-			to: "foo-recipient",
+			to: toAccount.address,
 			value: 50,
 		});
+
 		createAccountTransaction = Transaction.createTransaction({
 			account,
+		});
+
+		miningRewardTransaction = Transaction.createTransaction({
+			beneficiary: account.address,
 		});
 	});
 
@@ -21,33 +38,85 @@ describe("Transaction", () => {
 			expect(
 				Transaction.validateStandardTransaction({
 					transaction: standardTransaction,
+					state,
 				})
 			).resolves;
 		});
+
 		it("does no validate a malformed transaction", () => {
 			standardTransaction.to = "different-recipient;";
 			expect(
 				Transaction.validateStandardTransaction({
 					transaction: standardTransaction,
+					state,
 				})
 			).rejects.toMatchObject({ message: /Transaction/ });
+		});
+
+		it("does not validate when the value exceeds the balance", () => {
+			standardTransaction = Transaction.createTransaction({
+				account,
+				to: toAccount.address,
+				value: 9999,
+			});
+
+			expect(
+				Transaction.validateStandardTransaction({
+					transaction: standardTransaction,
+					state,
+				})
+			).rejects.toMatchObject({ message: /exceeds/ });
+		});
+
+		// By does no exist, we mean it is not initialized in the state
+		it("does not validate when the `to` address does not exist", () => {
+			standardTransaction = Transaction.createTransaction({
+				account,
+				to: "foo-recipient",
+				value: 50,
+			});
+
+			expect(
+				Transaction.validateStandardTransaction({
+					transaction: standardTransaction,
+					state,
+				})
+			).rejects.toMatchObject({ message: /does not exist/ });
 		});
 	});
 
 	describe("validateCreateAccountTransaction()", () => {
 		it("validates a create account transaction", () => {
 			expect(
-				Transaction.validateCreteAccountTransaction({
+				Transaction.validateCreateAccountTransaction({
 					transaction: createAccountTransaction,
 				})
 			).resolves;
 		});
 		it("does not validate a non create account transaction", () => {
 			expect(
-				Transaction.validateCreteAccountTransaction({
+				Transaction.validateCreateAccountTransaction({
 					transaction: standardTransaction,
 				})
 			).rejects.toMatchObject({ message: /incorrect/ });
+		});
+	});
+
+	describe("validateMiningRewardTransaction()", () => {
+		it("validates a mining reward transaction", () => {
+			expect(
+				Transaction.validateMiningRewardTransaction({
+					transaction: miningRewardTransaction,
+				})
+			).resolves;
+		});
+		it("does not validate a tampered with mining reward transaction", () => {
+			miningRewardTransaction.value = 9999;
+			expect(
+				Transaction.validateMiningRewardTransaction({
+					transaction: miningRewardTransaction,
+				})
+			).rejects.toMatchObject({ message: /does not equal the official/ });
 		});
 	});
 });

@@ -14,6 +14,16 @@ const getMine = async () => {
 	return getMineResponse;
 };
 
+const getAccountBalance = async ({ address }: any = {}) => {
+	const getAccountBalanceResponse = (
+		address
+			? await axios.get(`${BASE_UREL}/account/balance?address=${address}`)
+			: await axios.get(`${BASE_UREL}/account/balance`)
+	).data;
+	console.log("getAccountBalanceResponse: ", getAccountBalanceResponse);
+	return getAccountBalanceResponse;
+};
+
 const main = async () => {
 	const postTransactResponse = await postTransact({});
 	console.log(
@@ -21,20 +31,31 @@ const main = async () => {
 		postTransactResponse
 	);
 
-	const toAccountData = postTransactResponse.transaction.data.accountData;
+	let toAccountData = postTransactResponse.transaction.data.accountData;
 
-	const postTransactResponse2 = await postTransact({
-		to: toAccountData.address,
-		value: 20,
-	});
-	console.log(
-		"postTransactResponse2: (Standard Transaction) ",
-		postTransactResponse2
-	);
+	setTimeout(async () => {
+		await getMine();
 
-	setTimeout(() => {
-		getMine();
-	}, 1000);
+		// const toAccountData = postTransactResponse.transaction.data.accountData;
+
+		const postTransactResponse2 = await postTransact({
+			to: toAccountData.address,
+			value: 20,
+		});
+		console.log(
+			"postTransactResponse2: (Standard Transaction) ",
+			postTransactResponse2
+		);
+
+		setTimeout(async () => {
+			await getMine();
+
+			const getAccountBalanceRespone = await getAccountBalance({
+				address: toAccountData.address,
+			});
+			const getAccountBalanceRespone2 = await getAccountBalance();
+		}, 2000);
+	}, 2000);
 };
 
 main().then().catch(console.error);

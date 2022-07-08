@@ -2,9 +2,11 @@ import Block from "./block";
 
 class Blockchain {
 	public chain: Block[];
+	public state: any;
 
-	constructor() {
+	constructor({ state }: any) {
 		this.chain = [Block.genesis()];
+		this.state = state;
 	}
 
 	addBlock({ block, transactionQueue }: any) {
@@ -12,9 +14,12 @@ class Blockchain {
 			Block.validateBlock({
 				lastBlock: this.chain[this.chain.length - 1],
 				block,
+				state: this.state,
 			})
 				.then(() => {
 					this.chain.push(block);
+					Block.runBlock({ block, state: this.state });
+
 					transactionQueue.clearBlockTransactions({
 						transactionSeries: block.transactionSeries,
 					});
@@ -35,7 +40,10 @@ class Blockchain {
 					await Block.validateBlock({
 						lastBlock,
 						block,
+						state: this.state,
 					});
+
+					Block.runBlock({ block, state: this.state });
 				} catch (error) {
 					return reject(error);
 				}

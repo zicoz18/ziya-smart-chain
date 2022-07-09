@@ -1,14 +1,30 @@
 import Interpreter from "../../interpreter";
+import Trie from "../../store/trie";
 
-const { STOP, ADD, SUB, MUL, DIV, PUSH, LT, GT, EQ, AND, OR, JUMP, JUMPI } =
-	Interpreter.OPCODE_MAP;
+const {
+	STOP,
+	ADD,
+	SUB,
+	MUL,
+	DIV,
+	PUSH,
+	LT,
+	GT,
+	EQ,
+	AND,
+	OR,
+	JUMP,
+	JUMPI,
+	STORE,
+	LOAD,
+} = Interpreter.OPCODE_MAP;
 
 describe("Interpreter", () => {
 	describe("runCode()", () => {
 		describe("and the code includes ADD", () => {
 			it("adds two values", () => {
 				const code = [PUSH, 2, PUSH, 3, ADD, STOP];
-				const result = new Interpreter().runCode(code);
+				const result = new Interpreter().runCode(code)?.result;
 				expect(result).toEqual(5);
 			});
 		});
@@ -16,7 +32,7 @@ describe("Interpreter", () => {
 		describe("and the code includes SUB", () => {
 			it("subtracts one value from another", () => {
 				const code = [PUSH, 2, PUSH, 3, SUB, STOP];
-				const result = new Interpreter().runCode(code);
+				const result = new Interpreter().runCode(code)?.result;
 				expect(result).toEqual(1);
 			});
 		});
@@ -24,7 +40,7 @@ describe("Interpreter", () => {
 		describe("and the code includes MUL", () => {
 			it("products two values", () => {
 				const code = [PUSH, 2, PUSH, 3, MUL, STOP];
-				const result = new Interpreter().runCode(code);
+				const result = new Interpreter().runCode(code)?.result;
 				expect(result).toEqual(6);
 			});
 		});
@@ -32,7 +48,7 @@ describe("Interpreter", () => {
 		describe("and the code includes DIV", () => {
 			it("divides one value from another", () => {
 				const code = [PUSH, 2, PUSH, 3, DIV, STOP];
-				const result = new Interpreter().runCode(code);
+				const result = new Interpreter().runCode(code)?.result;
 				expect(result).toEqual(1.5);
 			});
 		});
@@ -40,7 +56,7 @@ describe("Interpreter", () => {
 		describe("and the code includes LT", () => {
 			it("checks if one value is less than another", () => {
 				const code = [PUSH, 2, PUSH, 3, LT, STOP];
-				const result = new Interpreter().runCode(code);
+				const result = new Interpreter().runCode(code)?.result;
 				expect(result).toEqual(0);
 			});
 		});
@@ -48,7 +64,7 @@ describe("Interpreter", () => {
 		describe("and the code includes GT", () => {
 			it("checks if one value is greater than another", () => {
 				const code = [PUSH, 2, PUSH, 3, GT, STOP];
-				const result = new Interpreter().runCode(code);
+				const result = new Interpreter().runCode(code)?.result;
 				expect(result).toEqual(1);
 			});
 		});
@@ -56,7 +72,7 @@ describe("Interpreter", () => {
 		describe("and the code includes EQ", () => {
 			it("checks if one value equals to another", () => {
 				const code = [PUSH, 2, PUSH, 3, EQ, STOP];
-				const result = new Interpreter().runCode(code);
+				const result = new Interpreter().runCode(code)?.result;
 				expect(result).toEqual(0);
 			});
 		});
@@ -64,7 +80,7 @@ describe("Interpreter", () => {
 		describe("and the code includes AND", () => {
 			it("ands two conditions", () => {
 				const code = [PUSH, 1, PUSH, 0, AND, STOP];
-				const result = new Interpreter().runCode(code);
+				const result = new Interpreter().runCode(code)?.result;
 				expect(result).toEqual(0);
 			});
 		});
@@ -72,7 +88,7 @@ describe("Interpreter", () => {
 		describe("and the code includes OR", () => {
 			it("ors two conditions", () => {
 				const code = [PUSH, 1, PUSH, 0, OR, STOP];
-				const result = new Interpreter().runCode(code);
+				const result = new Interpreter().runCode(code)?.result;
 				expect(result).toEqual(1);
 			});
 		});
@@ -90,7 +106,7 @@ describe("Interpreter", () => {
 					"jump successful",
 					STOP,
 				];
-				const result = new Interpreter().runCode(code);
+				const result = new Interpreter().runCode(code)?.result;
 				expect(result).toEqual("jump successful");
 			});
 		});
@@ -110,8 +126,46 @@ describe("Interpreter", () => {
 					"jump successful",
 					STOP,
 				];
-				const result = new Interpreter().runCode(code);
+				const result = new Interpreter().runCode(code)?.result;
 				expect(result).toEqual("jump successful");
+			});
+		});
+
+		describe("and the code includes STORE", () => {
+			it("stores a value", () => {
+				const interpreter = new Interpreter({
+					storageTrie: new Trie(),
+				});
+				const key = "foo";
+				const value = "bar";
+
+				interpreter.runCode([PUSH, value, PUSH, key, STORE, STOP]);
+
+				expect(interpreter.storageTrie.get({ key })).toEqual(value);
+			});
+		});
+
+		describe("and the code includes LOAD", () => {
+			it("loads a stored value", () => {
+				const interpreter = new Interpreter({
+					storageTrie: new Trie(),
+				});
+				const key = "foo";
+				const value = "bar";
+
+				expect(
+					interpreter.runCode([
+						PUSH,
+						value,
+						PUSH,
+						key,
+						STORE,
+						PUSH,
+						key,
+						LOAD,
+						STOP,
+					])?.result
+				).toEqual(value);
 			});
 		});
 

@@ -11,8 +11,10 @@ const AND = "AND";
 const OR = "OR";
 const JUMP = "JUMP";
 const JUMPI = "JUMPI";
+const STORE = "STORE";
+const LOAD = "LOAD";
 
-const OPCODE_MAP = {
+export const OPCODE_MAP = {
 	STOP,
 	ADD,
 	SUB,
@@ -26,7 +28,27 @@ const OPCODE_MAP = {
 	OR,
 	JUMP,
 	JUMPI,
+	STORE,
+	LOAD,
 };
+
+export const OPCODE_GAS_MAP = {
+	STOP: 0,
+	ADD: 1,
+	SUB: 1,
+	MUL: 1,
+	DIV: 1,
+	PUSH: 0,
+	LT: 1,
+	GT: 1,
+	EQ: 1,
+	AND: 1,
+	OR: 1,
+	JUMP: 2,
+	JUMPI: 2,
+	STORE: 5,
+	LOAD: 5,
+} as any;
 
 const EXECUTION_COMPLETE = "Execution complete";
 const EXECUTION_LIMIT = 10000;
@@ -42,6 +64,8 @@ interface IState {
 
 class Interpreter {
 	private state: IState;
+	public storageTrie: any;
+
 	static OPCODE_MAP: {
 		STOP: string;
 		ADD: string;
@@ -56,15 +80,18 @@ class Interpreter {
 		OR: string;
 		JUMP: string;
 		JUMPI: string;
+		STORE: string;
+		LOAD: string;
 	};
 
-	constructor() {
+	constructor({ storageTrie }: any = {}) {
 		this.state = {
 			programCounter: 0,
 			stack: [],
 			code: [],
 			executionCount: 0,
 		};
+		this.storageTrie = storageTrie;
 	}
 
 	jump() {
@@ -80,6 +107,7 @@ class Interpreter {
 
 	runCode(code: Code[]) {
 		this.state.code = code;
+		let gasUsed = 0;
 
 		while (this.state.programCounter < this.state.code.length) {
 			this.state.executionCount++;
@@ -91,6 +119,10 @@ class Interpreter {
 			}
 
 			const opCode = this.state.code[this.state.programCounter];
+			gasUsed += OPCODE_GAS_MAP[opCode];
+
+			let key;
+			let value;
 
 			try {
 				switch (opCode) {
@@ -103,7 +135,7 @@ class Interpreter {
 							throw new Error("The 'PUSH' instruction cannot be last");
 						}
 
-						const value = this.state.code[this.state.programCounter] as number;
+						value = this.state.code[this.state.programCounter] as number;
 						this.state.stack.push(value);
 						break;
 					case ADD:
@@ -141,12 +173,27 @@ class Interpreter {
 							this.jump();
 						}
 						break;
+					case STORE:
+						key = this.state.stack.pop();
+						value = this.state.stack.pop();
+
+						this.storageTrie.put({ key, value });
+						break;
+					case LOAD:
+						key = this.state.stack.pop();
+						value = this.storageTrie.get({ key });
+
+						this.state.stack.push(value);
+						break;
 					default:
 						break;
 				}
 			} catch (err: any) {
 				if (err.message === EXECUTION_COMPLETE) {
-					return this.state.stack[this.state.stack.length - 1];
+					return {
+						gasUsed,
+						result: this.state.stack[this.state.stack.length - 1],
+					};
 				}
 				throw err;
 			}

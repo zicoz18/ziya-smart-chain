@@ -1,10 +1,19 @@
 import axios from "axios";
 
+import { OPCODE_MAP } from "./interpreter";
+const { STOP, ADD, PUSH, STORE, LOAD } = OPCODE_MAP;
+
 const BASE_UREL = "http://localhost:3000";
 
-const postTransact = async ({ to, value }: any) => {
-	return (await axios.post(`${BASE_UREL}/account/transact`, { to, value }))
-		.data;
+const postTransact = async ({ code, to, value, gasLimit }: any) => {
+	return (
+		await axios.post(`${BASE_UREL}/account/transact`, {
+			code,
+			to,
+			value,
+			gasLimit,
+		})
+	).data;
 };
 
 const getMine = async () => {
@@ -25,6 +34,7 @@ const getAccountBalance = async ({ address }: any = {}) => {
 };
 
 const main = async () => {
+	let smartContractAccountData: any;
 	const postTransactResponse = await postTransact({});
 	console.log(
 		"postTransactResponse: (Create account transaction) ",
@@ -36,8 +46,6 @@ const main = async () => {
 	setTimeout(async () => {
 		await getMine();
 
-		// const toAccountData = postTransactResponse.transaction.data.accountData;
-
 		const postTransactResponse2 = await postTransact({
 			to: toAccountData.address,
 			value: 20,
@@ -47,15 +55,43 @@ const main = async () => {
 			postTransactResponse2
 		);
 
+		const key = "foo";
+		const value = "bar";
+		const code = [PUSH, value, PUSH, key, STORE, PUSH, key, LOAD, STOP];
+
+		const postTransactResponse3 = await postTransact({
+			code,
+		});
+		console.log(
+			"postTransactResponse3: (Smart Contract) ",
+			postTransactResponse3
+		);
+
+		smartContractAccountData =
+			postTransactResponse3.transaction.data.accountData;
+
 		setTimeout(async () => {
 			await getMine();
 
-			const getAccountBalanceRespone = await getAccountBalance({
-				address: toAccountData.address,
+			const postTransactResponse4 = await postTransact({
+				to: smartContractAccountData.codeHash,
+				value: 0,
+				gasLimit: 100,
 			});
-			const getAccountBalanceRespone2 = await getAccountBalance();
-		}, 2000);
-	}, 2000);
+			console.log(
+				"postTransactResponse4: (to the smart contract) ",
+				postTransactResponse4
+			);
+			setTimeout(async () => {
+				await getMine();
+
+				const getAccountBalanceRespone = await getAccountBalance({
+					address: toAccountData.address,
+				});
+				const getAccountBalanceRespone2 = await getAccountBalance();
+			}, 3000);
+		}, 3000);
+	}, 3000);
 };
 
 main().then().catch(console.error);

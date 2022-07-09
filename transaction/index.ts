@@ -1,6 +1,7 @@
-import { v4 as uuidv4, v4, v5 } from "uuid";
+import { v4 as uuidv4, v4 } from "uuid";
 import Account from "../account";
 import { MINING_REWARD } from "../config";
+import Interpreter from "../interpreter";
 
 const TRANSACTION_TYPE_MAP = {
 	CREATE_ACCOUNT: "CREATE_ACCOUNT",
@@ -15,21 +16,24 @@ class Transaction {
 	public value: any;
 	public data: any;
 	public signature: any;
+	public gasLimit: any;
 
-	constructor({ id, from, to, value, data, signature }: any) {
+	constructor({ id, from, to, value, data, signature, gasLimit }: any) {
 		this.id = id || v4();
 		this.from = from || "-";
 		this.to = to || "-";
 		this.value = value || 0;
 		this.data = data || "-";
 		this.signature = signature || "-";
+		this.gasLimit = gasLimit || 0;
 	}
 
-	static createTransaction({ account, to, value, beneficiary }: any) {
+	static createTransaction({ account, to, value, beneficiary, gasLimit }: any) {
 		if (beneficiary) {
 			return new Transaction({
 				to: beneficiary,
 				value: MINING_REWARD,
+				gasLimit,
 				data: {
 					type: TRANSACTION_TYPE_MAP.MINING_REWARD,
 				},
@@ -41,7 +45,8 @@ class Transaction {
 				id: v4(),
 				from: account.address,
 				to,
-				value,
+				value: value || 0,
+				gasLimit: gasLimit || 0,
 				data: { type: TRANSACTION_TYPE_MAP.TRANSACT },
 			};
 
@@ -61,7 +66,7 @@ class Transaction {
 
 	static validateStandardTransaction({ transaction, state }: any) {
 		return new Promise<void>((resolve, reject) => {
-			const { id, from, signature, value, to } = transaction;
+			const { id, from, signature, value, to, gasLimit } = transaction;
 			const transactionData = { ...transaction };
 			delete transactionData.signature;
 
@@ -76,10 +81,10 @@ class Transaction {
 			}
 
 			const fromBalance = state.getAccount({ address: from }).balance;
-			if (value > fromBalance) {
+			if (value + gasLimit > fromBalance) {
 				return reject(
 					new Error(
-						`Transaction value: ${value} exceeds balance: ${fromBalance}`
+						`Transaction value and gasLimit: ${value} exceeds balance: ${fromBalance}`
 					)
 				);
 			}
@@ -87,6 +92,20 @@ class Transaction {
 			const toAccount = state.getAccount({ address: to });
 			if (!toAccount) {
 				return reject(new Error(`The to field ${to} does not exist`));
+			}
+
+			if (toAccount.codeHash) {
+				const gasUsed = new Interpreter({
+					storageTrie: state.storageTrieMap[toAccount.codeHash],
+				}).runCode(toAccount.code)?.gasUsed as any;
+
+				if (gasUsed > gasLimit) {
+					return reject(
+						new Error(
+							`Transaction needs more gas. Provided: ${gasLimit}. Needs: ${gasUsed}.`
+						)
+					);
+				}
 			}
 
 			return resolve();
@@ -193,10 +212,29 @@ class Transaction {
 	static runStandardTransaction({ transaction, state }: any) {
 		const fromAccount = state.getAccount({ address: transaction.from });
 		const toAccount = state.getAccount({ address: transaction.to });
-		const { value } = transaction;
+
+		let gasUsed = 0;
+		let result;
+
+		if (toAccount.codeHash) {
+			console.log("toAccount: ", toAccount);
+			const interpreter = new Interpreter({
+				storageTrie: state.storageTrieMap[toAccount.codeHash],
+			});
+			({ result, gasUsed } = interpreter.runCode(toAccount.code) as any);
+			console.log(
+				` -*- Smart contract execution: ${transaction.id} - RESULT: ${result}`
+			);
+		}
+
+		const { value, gasLimit } = transaction;
+		const refund = gasLimit - gasUsed;
 
 		fromAccount.balance -= value;
+		fromAccount.balance -= gasLimit;
+		fromAccount.balance += refund;
 		toAccount.balance += value;
+		toAccount.balance += gasUsed;
 
 		state.putAccount({ address: transaction.from, accountData: fromAccount });
 		state.putAccount({ address: transaction.to, accountData: toAccount });
@@ -204,9 +242,9 @@ class Transaction {
 
 	static runCreateAccountTransaction({ transaction, state }: any) {
 		const { accountData } = transaction.data;
-		const { address } = accountData;
+		const { address, codeHash } = accountData;
 
-		state.putAccount({ address, accountData });
+		state.putAccount({ address: codeHash ? codeHash : address, accountData });
 	}
 
 	static runMiningRewardTransaction({ transaction, state }: any) {

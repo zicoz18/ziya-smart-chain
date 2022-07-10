@@ -2,21 +2,39 @@ import { GENESIS_DATA, MINE_RATE } from "../config";
 import { keccakHash } from "../util";
 import Transaction from "../transaction";
 import Trie from "../store/trie";
+import State from "../store/state";
 
 const HASH_LENGTH = 64;
 const MAX_HASH_VALUE = parseInt("f".repeat(HASH_LENGTH), 16);
 const MAX_NONCE_VALUE = 2 ** 64;
 
-class Block {
-	public blockHeaders: any;
-	public transactionSeries: any;
+interface BlockHeaders {
+	parentHash: string;
+	beneficiary: string;
+	difficulty: number;
+	number: number;
+	timestamp: number;
+	transactionsRoot: string;
+	stateRoot: string;
+	nonce: number;
+}
 
-	constructor({ blockHeaders, transactionSeries }: any) {
+class Block {
+	public blockHeaders: BlockHeaders;
+	public transactionSeries: Transaction[];
+
+	constructor({
+		blockHeaders,
+		transactionSeries,
+	}: {
+		blockHeaders: BlockHeaders;
+		transactionSeries: Transaction[];
+	}) {
 		this.blockHeaders = blockHeaders;
 		this.transactionSeries = transactionSeries;
 	}
 
-	static calculateBlockTargetHash({ lastBlock }: any) {
+	static calculateBlockTargetHash({ lastBlock }: { lastBlock: Block }): string {
 		const value = (MAX_HASH_VALUE / lastBlock.blockHeaders.difficulty).toString(
 			16
 		);
@@ -27,7 +45,13 @@ class Block {
 		return "0".repeat(HASH_LENGTH - value.length) + value;
 	}
 
-	static adjustDifficulty({ lastBlock, timestamp }: any) {
+	static adjustDifficulty({
+		lastBlock,
+		timestamp,
+	}: {
+		lastBlock: Block;
+		timestamp: number;
+	}): number {
 		const { difficulty } = lastBlock.blockHeaders;
 
 		if (timestamp - lastBlock.blockHeaders.timestamp > MINE_RATE) {
@@ -46,7 +70,12 @@ class Block {
 		beneficiary,
 		transactionSeries,
 		stateRoot,
-	}: any) {
+	}: {
+		lastBlock: Block;
+		beneficiary: string;
+		transactionSeries: Transaction[];
+		stateRoot: string;
+	}): Block {
 		const target = this.calculateBlockTargetHash({ lastBlock });
 		const miningRewardTransaction = Transaction.createTransaction({
 			beneficiary,
@@ -81,11 +110,19 @@ class Block {
 		});
 	}
 
-	static genesis() {
-		return new this(GENESIS_DATA);
+	static genesis(): Block {
+		return new this(GENESIS_DATA as any as Block);
 	}
 
-	static validateBlock({ lastBlock, block, state }: any) {
+	static validateBlock({
+		lastBlock,
+		block,
+		state,
+	}: {
+		lastBlock: Block;
+		block: Block;
+		state: State;
+	}): Promise<void> {
 		return new Promise<void>((resolve, reject) => {
 			if (keccakHash(block) === keccakHash(Block.genesis())) {
 				return resolve();
@@ -115,7 +152,7 @@ class Block {
 			const { blockHeaders } = block;
 			const { nonce } = blockHeaders;
 			const truncatedBlockHeaders = { ...blockHeaders };
-			delete truncatedBlockHeaders.nonce;
+			delete (truncatedBlockHeaders as any).nonce;
 			const header = keccakHash(truncatedBlockHeaders);
 			const underTargetHash = keccakHash(header + nonce);
 
@@ -134,7 +171,7 @@ class Block {
 			) {
 				return reject(
 					new Error(
-						`The rebuild transactions root does not match the block's transactions root: ${block.blockHeaders.transactionRoot}`
+						`The rebuild transactions root does not match the block's transactions root: ${block.blockHeaders.transactionsRoot}`
 					)
 				);
 			}
@@ -148,7 +185,7 @@ class Block {
 		});
 	}
 
-	static runBlock({ block, state }: any) {
+	static runBlock({ block, state }: { block: Block; state: State }): void {
 		for (let transaction of block.transactionSeries) {
 			Transaction.runTransaction({ transaction, state });
 		}

@@ -1,15 +1,23 @@
+import State from "../store/state";
+import TransactionQueue from "../transaction/transaction-queue";
 import Block from "./block";
 
 class Blockchain {
 	public chain: Block[];
-	public state: any;
+	public state: State;
 
-	constructor({ state }: any) {
+	constructor({ state }: { state: State }) {
 		this.chain = [Block.genesis()];
 		this.state = state;
 	}
 
-	addBlock({ block, transactionQueue }: any) {
+	addBlock({
+		block,
+		transactionQueue,
+	}: {
+		block: Block;
+		transactionQueue: TransactionQueue;
+	}): Promise<void> {
 		return new Promise<void>((resolve, reject) => {
 			Block.validateBlock({
 				lastBlock: this.chain[this.chain.length - 1],
@@ -29,12 +37,12 @@ class Blockchain {
 		});
 	}
 
-	replaceChain({ chain }: any) {
+	replaceChain({ chain }: { chain: Block[] }): Promise<void> {
 		return new Promise<void>(async (resolve, reject) => {
 			for (let i = 0; i < chain.length; i++) {
 				const block = chain[i];
 				const lastBlockIndex = i - 1;
-				const lastBlock = lastBlockIndex >= 0 ? chain[i - 1] : null;
+				const lastBlock = (lastBlockIndex >= 0 ? chain[i - 1] : null) as Block;
 
 				try {
 					await Block.validateBlock({

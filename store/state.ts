@@ -1,3 +1,4 @@
+import Account from "../account";
 import Trie from "./trie";
 
 class State {
@@ -9,7 +10,13 @@ class State {
 		this.storageTrieMap = {};
 	}
 
-	putAccount({ address, accountData }: any) {
+	putAccount({
+		address,
+		accountData,
+	}: {
+		address: string;
+		accountData: Account;
+	}): void {
 		if (!this.storageTrieMap[address]) {
 			this.storageTrieMap[address] = new Trie();
 		}
@@ -22,11 +29,11 @@ class State {
 		});
 	}
 
-	getAccount({ address }: any) {
+	getAccount({ address }: { address: string }): Account {
 		return this.stateTrie.get({ key: address });
 	}
 
-	getStateRoot() {
+	getStateRoot(): string {
 		return this.stateTrie.rootHash;
 	}
 }

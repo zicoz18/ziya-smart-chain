@@ -1,3 +1,5 @@
+import Transaction from ".";
+
 class TransactionQueue {
 	public transactionMap: any;
 
@@ -5,15 +7,19 @@ class TransactionQueue {
 		this.transactionMap = {};
 	}
 
-	add(transaction: any) {
+	add(transaction: Transaction): void {
 		this.transactionMap[transaction.id] = transaction;
 	}
 
-	getTransactionSeries() {
+	getTransactionSeries(): Transaction[] {
 		return Object.values(this.transactionMap);
 	}
 
-	clearBlockTransactions({ transactionSeries }: any) {
+	clearBlockTransactions({
+		transactionSeries,
+	}: {
+		transactionSeries: Transaction[];
+	}): void {
 		for (let transaction of transactionSeries) {
 			delete this.transactionMap[transaction.id];
 		}

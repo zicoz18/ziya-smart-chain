@@ -1,3 +1,5 @@
+import Trie from "../store/trie";
+
 const STOP = "STOP";
 const ADD = "ADD";
 const SUB = "SUB";
@@ -53,7 +55,7 @@ export const OPCODE_GAS_MAP = {
 const EXECUTION_COMPLETE = "Execution complete";
 const EXECUTION_LIMIT = 10000;
 
-type Code = string | number;
+export type Code = string | number;
 
 interface IState {
 	programCounter: number;
@@ -64,7 +66,7 @@ interface IState {
 
 class Interpreter {
 	private state: IState;
-	public storageTrie: any;
+	public storageTrie: Trie;
 
 	static OPCODE_MAP: {
 		STOP: string;
@@ -84,14 +86,14 @@ class Interpreter {
 		LOAD: string;
 	};
 
-	constructor({ storageTrie }: any = {}) {
+	constructor({ storageTrie }: { storageTrie?: Trie } = {}) {
 		this.state = {
 			programCounter: 0,
 			stack: [],
 			code: [],
 			executionCount: 0,
 		};
-		this.storageTrie = storageTrie;
+		this.storageTrie = storageTrie as Trie;
 	}
 
 	jump() {

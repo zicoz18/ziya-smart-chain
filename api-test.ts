@@ -71,7 +71,9 @@ const main = async () => {
 			postTransactResponse3.transaction.data.accountData;
 
 		setTimeout(async () => {
+			console.log("started mining");
 			await getMine();
+			console.log("mined");
 
 			const postTransactResponse4 = await postTransact({
 				to: smartContractAccountData.codeHash,

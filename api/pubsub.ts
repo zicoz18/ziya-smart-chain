@@ -1,6 +1,9 @@
 import PubNub from "pubnub";
 import dotenv from "dotenv";
 import Transaction from "../transaction";
+import Blockchain from "../blockchain";
+import TransactionQueue from "../transaction/transaction-queue";
+import Block from "../blockchain/block";
 
 dotenv.config();
 
@@ -19,10 +22,16 @@ const CHANNELS_MAP = {
 
 class PubSub {
 	public pubnub: PubNub;
-	public blockchain: any;
-	public transactionQueue: any;
+	public blockchain: Blockchain;
+	public transactionQueue: TransactionQueue;
 
-	constructor({ blockchain, transactionQueue }: any) {
+	constructor({
+		blockchain,
+		transactionQueue,
+	}: {
+		blockchain: Blockchain;
+		transactionQueue: TransactionQueue;
+	}) {
 		this.pubnub = new PubNub(credentials as any);
 		this.blockchain = blockchain;
 		this.transactionQueue = transactionQueue;
@@ -30,15 +39,15 @@ class PubSub {
 		this.listen();
 	}
 
-	subscribeToChannels() {
+	subscribeToChannels(): void {
 		this.pubnub.subscribe({ channels: Object.values(CHANNELS_MAP) });
 	}
 
-	publish({ channel, message }: any) {
+	publish({ channel, message }: { channel: string; message: string }): void {
 		this.pubnub.publish({ channel, message });
 	}
 
-	listen() {
+	listen(): void {
 		this.pubnub.addListener({
 			message: (messageObject: any) => {
 				const { message, channel } = messageObject;
@@ -70,14 +79,14 @@ class PubSub {
 		});
 	}
 
-	broadcastBlock(block: any) {
+	broadcastBlock(block: Block): void {
 		this.publish({
 			channel: CHANNELS_MAP.BLOCK,
 			message: JSON.stringify(block),
 		});
 	}
 
-	broadcastTransaction(transaction: any) {
+	broadcastTransaction(transaction: Transaction): void {
 		this.publish({
 			channel: CHANNELS_MAP.TRANSACTION,
 			message: JSON.stringify(transaction),

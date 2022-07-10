@@ -2,6 +2,8 @@ import { v4 as uuidv4, v4 } from "uuid";
 import Account from "../account";
 import { MINING_REWARD } from "../config";
 import Interpreter from "../interpreter";
+import { ec as EC } from "elliptic";
+import State from "../store/state";
 
 const TRANSACTION_TYPE_MAP = {
 	CREATE_ACCOUNT: "CREATE_ACCOUNT",
@@ -10,15 +12,31 @@ const TRANSACTION_TYPE_MAP = {
 };
 
 class Transaction {
-	public id: any;
-	public from: any;
-	public to: any;
-	public value: any;
+	public id: string;
+	public from: string;
+	public to: string;
+	public value: number;
 	public data: any;
-	public signature: any;
-	public gasLimit: any;
+	public signature: EC.Signature | string;
+	public gasLimit: number;
 
-	constructor({ id, from, to, value, data, signature, gasLimit }: any) {
+	constructor({
+		id,
+		from,
+		to,
+		value,
+		data,
+		signature,
+		gasLimit,
+	}: {
+		id?: string;
+		from?: string;
+		to?: string;
+		value?: number;
+		data?: any;
+		signature?: EC.Signature | string;
+		gasLimit?: number;
+	}) {
 		this.id = id || v4();
 		this.from = from || "-";
 		this.to = to || "-";
@@ -28,7 +46,19 @@ class Transaction {
 		this.gasLimit = gasLimit || 0;
 	}
 
-	static createTransaction({ account, to, value, beneficiary, gasLimit }: any) {
+	static createTransaction({
+		account,
+		to,
+		value,
+		beneficiary,
+		gasLimit,
+	}: {
+		account?: Account;
+		to?: string;
+		value?: number;
+		beneficiary?: string;
+		gasLimit?: number;
+	}): Transaction {
 		if (beneficiary) {
 			return new Transaction({
 				to: beneficiary,
@@ -43,7 +73,7 @@ class Transaction {
 		if (to) {
 			const transactionData = {
 				id: v4(),
-				from: account.address,
+				from: account?.address,
 				to,
 				value: value || 0,
 				gasLimit: gasLimit || 0,
@@ -52,23 +82,29 @@ class Transaction {
 
 			return new Transaction({
 				...transactionData,
-				signature: account.sign(transactionData),
+				signature: account?.sign(transactionData),
 			});
 		}
 
 		return new Transaction({
 			data: {
 				type: TRANSACTION_TYPE_MAP.CREATE_ACCOUNT,
-				accountData: account.toJSON(),
+				accountData: account?.toJSON(),
 			},
 		});
 	}
 
-	static validateStandardTransaction({ transaction, state }: any) {
+	static validateStandardTransaction({
+		transaction,
+		state,
+	}: {
+		transaction: Transaction;
+		state: State;
+	}): Promise<void> {
 		return new Promise<void>((resolve, reject) => {
 			const { id, from, signature, value, to, gasLimit } = transaction;
 			const transactionData = { ...transaction };
-			delete transactionData.signature;
+			delete (transactionData as any).signature;
 
 			if (
 				!Account.verifySignature({
@@ -112,7 +148,11 @@ class Transaction {
 		});
 	}
 
-	static validateCreateAccountTransaction({ transaction }: any) {
+	static validateCreateAccountTransaction({
+		transaction,
+	}: {
+		transaction: Transaction;
+	}): Promise<void> {
 		return new Promise<void>((resolve, reject) => {
 			const expectedAccountDataFields = Object.keys(new Account().toJSON());
 			const fileds = Object.keys(transaction.data.accountData);
@@ -137,7 +177,11 @@ class Transaction {
 		});
 	}
 
-	static validateMiningRewardTransaction({ transaction }: any) {
+	static validateMiningRewardTransaction({
+		transaction,
+	}: {
+		transaction: Transaction;
+	}): Promise<void> {
 		return new Promise<void>((resolve, reject) => {
 			const { value } = transaction;
 
@@ -153,7 +197,13 @@ class Transaction {
 		});
 	}
 
-	static validateTransactionSeries({ transactionSeries, state }: any) {
+	static validateTransactionSeries({
+		transactionSeries,
+		state,
+	}: {
+		transactionSeries: Transaction[];
+		state: State;
+	}): Promise<void> {
 		return new Promise<void>(async (resolve, reject) => {
 			for (let transaction of transactionSeries) {
 				try {
@@ -186,7 +236,13 @@ class Transaction {
 		});
 	}
 
-	static runTransaction({ transaction, state }: any) {
+	static runTransaction({
+		transaction,
+		state,
+	}: {
+		transaction: Transaction;
+		state: State;
+	}): void {
 		switch (transaction.data.type) {
 			case TRANSACTION_TYPE_MAP.TRANSACT:
 				Transaction.runStandardTransaction({ transaction, state });
@@ -209,7 +265,13 @@ class Transaction {
 		}
 	}
 
-	static runStandardTransaction({ transaction, state }: any) {
+	static runStandardTransaction({
+		transaction,
+		state,
+	}: {
+		transaction: Transaction;
+		state: State;
+	}): void {
 		const fromAccount = state.getAccount({ address: transaction.from });
 		const toAccount = state.getAccount({ address: transaction.to });
 
@@ -240,14 +302,26 @@ class Transaction {
 		state.putAccount({ address: transaction.to, accountData: toAccount });
 	}
 
-	static runCreateAccountTransaction({ transaction, state }: any) {
+	static runCreateAccountTransaction({
+		transaction,
+		state,
+	}: {
+		transaction: Transaction;
+		state: State;
+	}): void {
 		const { accountData } = transaction.data;
 		const { address, codeHash } = accountData;
 
 		state.putAccount({ address: codeHash ? codeHash : address, accountData });
 	}
 
-	static runMiningRewardTransaction({ transaction, state }: any) {
+	static runMiningRewardTransaction({
+		transaction,
+		state,
+	}: {
+		transaction: Transaction;
+		state: State;
+	}): void {
 		const { to, value } = transaction;
 		const accountData = state.getAccount({ address: to });
 		accountData.balance += value;
